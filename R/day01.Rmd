@@ -1,7 +1,18 @@
-# Initial tests
-#libraries
-library(tidyverse)
+---
+title: "day01"
+author: "Gillian McGinnis"
+date: "11/10/2020"
+output: pdf_document
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggthemes)
+library(wesanderson)
+```
+
+```{r dataframes}
 # Loading data; source: https://github.com/Reed-Statistics/data-viz-competition-2020
 diversity_school <- 
   read_csv("https://raw.githubusercontent.com/Reed-Statistics/data-viz-competition-2020/main/data/diversity_school.csv") %>%
@@ -22,5 +33,21 @@ tuition_cost <-
 tuition_income <-
   read_csv("https://raw.githubusercontent.com/Reed-Statistics/data-viz-competition-2020/main/data/tuition_income.csv") %>%
   dplyr::select(-X1)
-#
+```
+
+```{r plots}
+diversity_filtered <- diversity_school %>%
+  filter(name == "University of Arizona") %>%
+  filter(category != "Women",
+         category != "Total Minority")
+
+ggplot(diversity_filtered, aes(x = category, y = enrollment))+
+  geom_point()
+
+
+
+#cost_filtered <- tuition_cost %>%
+  
+```
+
 
