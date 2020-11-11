@@ -8,12 +8,16 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(ggrepel)
+library(janitor)
 library(ggthemes)
 library(wesanderson)
 ```
 
 ```{r dataframes}
 # Loading data; source: https://github.com/Reed-Statistics/data-viz-competition-2020
+rm(list = ls())
+
 diversity_school <- 
   read_csv("https://raw.githubusercontent.com/Reed-Statistics/data-viz-competition-2020/main/data/diversity_school.csv") %>%
   dplyr::select(-X1)
@@ -36,17 +40,82 @@ tuition_income <-
 ```
 
 ```{r plots}
-diversity_filtered <- diversity_school %>%
+filtered_diversity <- diversity_school %>%
   filter(name == "University of Arizona") %>%
   filter(category != "Women",
          category != "Total Minority")
 
-ggplot(diversity_filtered, aes(x = category, y = enrollment))+
+ggplot(filtered_diversity, aes(x = category, y = enrollment))+
   geom_point()
 
 
 
-#cost_filtered <- tuition_cost %>%
+filtered_cost <- tuition_cost %>%
+  filter(state_code == "AZ",
+         type == "For Profit")
+
+ggplot(filtered_cost, aes(x = name, y = in_state_total))+
+  geom_point()
+
+
+filtered_potential <- salary_potential %>%
+  filter(state_name == "Oregon") %>%
+  select(!rank)
+
+ggplot(filtered_potential, aes(x = make_world_better_percent, y = stem_percent, label = name))+
+  geom_point()+
+  geom_text_repel(size=2)
+  #geom_text(position = "dodge", nudge = )
+  #geom_label(aes(label = name), position = "dodge", check_overlap=TRUE, size=1)
+
+ggplot(filtered_potential, aes(x = make_world_better_percent, y = mid_career_pay, label = name))+
+  geom_point(aes(y = early_career_pay))+
+  geom_point(aes(y = mid_career_pay))+
+  geom_text_repel(size = 2)
+
+
+filtered_longer <- filtered_potential %>%
+  pivot_longer(cols = ends_with("pay"), names_to = "time", values_to = "pay") %>%
+  group_by(name)
+
+ggplot(filtered_longer, aes(x = make_world_better_percent, y = pay, label = name, color = time, group = name))+
+  geom_line(color = "green")+
+  geom_point()
+
+
+ggplot(salary_potential, aes(x = early_career_pay, y = mid_career_pay, color = state_name))+
+  geom_point(alpha=.3)
+
+
+combinedDivSal <- full_join(diversity_school, salary_potential)
+
+combinedDivSalFiltered <- combinedDivSal %>%
+  clean_names("small_camel") %>%
+  drop_na() %>%
+  filter(category %in% c("Total Minority", "White")) %>%
+  group_by(name) %>%
+  filter(state == "Arizona")
+
+ggplot(combinedDivSalFiltered, aes(x = makeWorldBetterPercent, y = enrollment, color = category))+
+  geom_point()
+
+combinedGender <- combinedDivSal %>%
+  clean_names("small_camel") %>%
+  drop_na() %>%
+  filter(category == "Women") %>%
+  mutate(men = totalEnrollment - enrollment) %>%
+  select(!c(totalEnrollment, category)) %>%
+  rename(women = enrollment) %>%
+  pivot_longer(cols = c(women, men), names_to = "gender", values_to = "pop")
+
+combinedGenderFiltered <- combinedGender %>%
+  filter(state == "California") %>%
+  mutate(salChange = (((midCareerPay - earlyCareerPay)/earlyCareerPay)*100))
+
+ggplot(combinedGenderFiltered, aes(x = salChange, y = pop, color = gender, group = name))+
+  geom_point()+
+  geom_line(color = "green")+
+  scale_color_manual(values = c("women" = "deeppink", "men" = "blue"))
   
 ```
 
