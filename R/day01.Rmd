@@ -119,4 +119,61 @@ ggplot(combinedGenderFiltered, aes(x = salChange, y = pop, color = gender, group
   
 ```
 
+```{r tuition}
+histTuition <- historical_tuition %>%
+  clean_names("small_camel") %>%
+  filter(tuitionType == c("All Constant", "All Current")) %>%
+  unite("both", c(tuitionType, type), remove = FALSE)
+  # mutate(years = case_when(
+  #   tuitionType == str_detect("2 Year") ~ "2 Year",
+  #   tutionType == str_detect("4 Year") ~ "4 Year"
+  # ))
+
+money <- salary_potential %>%
+  summary(mean = mean(mid_career_pay))
+
+ggplot(histTuition, aes(x = year, y = tuitionCost, color = type, shape = tuitionType, group = type))+
+  geom_point()+
+  geom_line(aes(group = both))+
+  #geom_line()+
+  theme_few()+
+  theme(axis.text.x = element_text(angle = 30,
+                                   vjust = 0.7))
+```
+
+
+```{r heatmap}
+ggplot(tuition_cost, aes(x = type, y = state_code, fill = out_of_state_total))+
+  geom_tile()
+
+cut_diversity <- diversity_school %>%
+  filter(category != "White",
+         category != "Women",
+         category != "Total Minority") %>%
+  group_by(state) %>%
+  filter(state %in% c("Arizona", "Alabama", "California", "Oregon", "New York", "New Mexico"))
+
+ggplot(cut_diversity, aes(x = category, y = state, fill = enrollment))+
+  #geom_bin2d()
+  geom_tile()
+  #geom_raster()
+#sad
+
+```
+
+```{r maps}
+ggplot(tuition_cost, aes(fill = out_of_state_total, map_id = state))+
+  geom_map(map = map_data("state"))
+
+states_map <- as.data.frame(apply(map_data("state"),2,str_to_title)) %>%
+  rename(state = region)
+
+tuition_map <- left_join(states_map, tuition_cost, by = "state") %>%
+  group_by(long, lat)
+
+ggplot(tuition_map, aes(x=long, y=lat))+
+  geom_polygon(aes(fill = out_of_state_total))
+#whelp it's getting there
+```
+
 
