@@ -428,7 +428,7 @@ ggplot(big_data_coord, aes(x = abbrev, y = mean, fill = mean))+
   aes(x=reorder(abbrev, mean))+
   theme_light()+
   theme(axis.text.x = element_text(angle=-20))+
-  scale_fill_gradientn(colors = wes_palette(name = "Zissou1", type="continuous"))+
+  scale_fill_gradientn(limits = c(0, 100), colors = wes_palette(name = "Zissou1", type="continuous"))+
   labs(x = "", y = "Mean Percentage", fill = "Mean Percentage")
 
 big_data_coord_region <- big_data_coord %>%
