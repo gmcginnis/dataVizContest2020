@@ -329,4 +329,228 @@ ggplot(div_sal_now, aes(x = percent, y = stem_percent))+
 
 ```
 
+```{r percentages}
+big_data <- diversity_school %>%
+  full_join(salary_potential) %>%
+  full_join(tuition_cost) %>%
+  full_join(tuition_income) %>%
+  group_by(category) %>%
+  mutate(row = row_number()) %>%
+  pivot_wider(names_from = category, values_from = enrollment) %>%
+  select(-row) %>%
+  mutate(Men = total_enrollment-Women)
+
+big_data_per <- diversity_school %>%
+  full_join(salary_potential) %>%
+  full_join(tuition_cost) %>%
+  #full_join(tuition_income) %>%
+  group_by(category) %>%
+  mutate(enrollment_per = (enrollment/total_enrollment)*100) %>%
+  select(!c(enrollment, state_name)) %>%
+  mutate(row = row_number()) %>%
+  pivot_wider(names_from = category, values_from = enrollment_per) %>%
+  select(-c(row,'NA')) %>%
+  mutate(Men = (100-Women))
+
+big_data_long <- big_data_per %>%
+  pivot_longer(cols=17:28, names_to = "category", values_to = "enrollment_per")
+
+ggplot(big_data_long, aes(x = state, y = enrollment_per, color = category))+
+  geom_point(alpha=0.3)+
+  coord_flip()+
+  facet_wrap(~category)
+
+big_data_state <- big_data_long %>%
+  drop_na(enrollment_per, state) %>%
+  group_by(state, category) %>%
+  summarize(mean = mean(enrollment_per))
+  #filter(state %in% c("Washington", "Oregon", "California"))
+
+ggplot(big_data_state, aes(x = state, y = mean))+
+  geom_point(alpha=0.3)+
+  coord_flip()+
+  facet_wrap(~category)+
+  theme_few()
+
+big_data_west <- big_data_long %>%
+  filter(state %in% c("Washington", "Oregon", "California")) %>%
+  drop_na(type)
+
+ggplot(big_data_west, aes(x = state, y = enrollment_per, color = type))+
+  geom_boxplot(alpha=0.5)+
+  coord_flip()+
+  facet_wrap(~category)+
+  theme_few()
+
+ggplot(subset(big_data_west, category == c("Women", "Men")), aes(x = state, y = enrollment_per, color = type))+
+  geom_boxplot(alpha=0.5)+
+  coord_flip()+
+  facet_wrap(~category)+
+  theme_few()
+
+ggplot(subset(big_data_west, category == c("Women", "Men")), aes(x = type, y = enrollment_per, color = category))+
+  geom_boxplot()+
+  coord_flip()+
+  facet_wrap(~state)+
+  theme_few()
+
+ggplot(subset(big_data_west, category == c("Total Minority")), aes(x = type, y = enrollment_per, color = category))+
+  geom_violin()+
+  geom_jitter(alpha=0.3)+
+  #coord_flip()+
+  facet_wrap(~state)+
+  theme_few()
+
+# state source: https://worldpopulationreview.com/states/state-abbreviations
+states <- read_csv("data/states.csv") %>%
+  clean_names()
+
+big_data_coord <- big_data_state %>%
+  #filter(category %in% c("Men", "Women"))
+  filter(category == "Total Minority") %>%
+  full_join(states) %>%
+  drop_na()
+
+## Here too!
+ggplot(big_data_coord, aes(x = abbrev, y = mean, fill = mean))+
+  geom_col()+
+  coord_polar()+
+  aes(x=reorder(abbrev, mean))+
+  theme_light()+
+  theme(axis.text.x = element_text(angle=-20))+
+  scale_fill_gradientn(colors = wes_palette(name = "Zissou1", type="continuous"))+
+  labs(x = "", y = "Mean Percentage", fill = "Mean Percentage")
+
+ggplot(big_data_coord, aes(x = abbrev, y = mean, fill = mean))+
+  geom_col()+
+  ylim(0, 100)+
+  coord_polar()+
+  aes(x=reorder(abbrev, mean))+
+  theme_light()+
+  theme(axis.text.x = element_text(angle=-20))+
+  scale_fill_gradientn(colors = wes_palette(name = "Zissou1", type="continuous"))+
+  labs(x = "", y = "Mean Percentage", fill = "Mean Percentage")
+
+big_data_coord_region <- big_data_coord %>%
+  full_join(census_regions) %>%
+  drop_na(mean) %>%
+  group_by(division) %>%
+  summarize(mean_div = mean(mean))
+
+# here too I guess
+ggplot(big_data_coord_region, aes(x = division, y = mean_div, fill = mean_div))+
+  geom_col()+
+  #ylim(0, 100)+
+  coord_polar()+
+  aes(x=reorder(division, mean_div))+
+  theme_light()+
+  theme(axis.text.x = element_text(angle=-20))+
+  scale_fill_gradientn(colors = wes_palette(name = "Zissou1", type="continuous"))+
+  labs(x = "", y = "Mean Percentage", fill = "Mean Percentage")
+
+
+big_data_gender <- big_data_state %>%
+  filter(category %in% c("Men", "Women")) %>%
+  pivot_wider(names_from = category, values_from = mean) %>%
+  arrange(Women) %>%
+  pivot_longer(cols = c("Men", "Women"), names_to = "category", values_to = "mean") %>%
+  ungroup() %>%
+  mutate(row = row_number()) %>%
+  full_join(states) %>%
+  drop_na()
+
+## Down here!
+ggplot(big_data_gender, aes(x = reorder(abbrev,row), y = mean, fill = category))+
+  geom_col()+
+  coord_polar()+
+  scale_fill_manual(values = c(Men = "palegreen1", Women = "mediumpurple1"))+
+  theme_few()+
+  theme(axis.text.x = element_text(angle=-20))
+
+ggplot(big_data_gender, aes(x = reorder(abbrev, row), y = mean, fill = category))+
+  geom_col()+
+  geom_text(data=subset(big_data_gender, category == "Women"), aes(label=code),vjust=0,color="black",size=2,angle=-20)+
+  coord_polar()+
+  theme_light()+
+  theme(axis.text.x = element_text(angle=-20))
+
+
+
+
+
+library(ggridges)
+
+big_data_ridge <- big_data_long %>%
+  full_join(states) %>%
+  drop_na()
+
+ggplot(subset(big_data_ridge, category == c("Total Minority")), aes(x = enrollment_per, y = state, fill = type))+
+  geom_density_ridges(alpha=0.5)+
+  theme_ridges()+
+  theme_few()
+
+# library(RCurl)
+# census_url <- getURL("https://github.com/cphalpert/census-regions/blob/master/us%20census%20bureau%20regions%20and%20divisions.csv")
+census_regions <- read_csv("https://raw.githubusercontent.com/cphalpert/census-regions/master/us%20census%20bureau%20regions%20and%20divisions.csv") %>%
+  clean_names()
+
+big_data_subset <- big_data_ridge %>%
+  full_join(census_regions)
+
+ggplot(subset(big_data_subset, category == c("Total Minority")), aes(x = enrollment_per, y = region, fill = type))+
+  geom_density_ridges(alpha=0.5)+
+  scale_fill_manual(values = wes_palette(name = "Darjeeling1"))+
+  #theme_ridges()+
+  theme_few()
+
+## Down here!
+ggplot(subset(big_data_subset, category == c("Total Minority")), aes(x = enrollment_per, y = region, color = type))+
+  geom_violin()+
+  geom_point(position=position_jitterdodge(), alpha=0.3)+
+  #geom_jitter(alpha=0.5)+
+  scale_color_manual(values = wes_palette(name = "GrandBudapest2", 2, type="continuous"))+
+  #theme_ridges()+
+  theme_few()
+
+ggplot(subset(big_data_subset, category == c("Total Minority")), aes(x = enrollment_per, y = region, fill = division))+
+  geom_density_ridges(alpha=0.5)+
+  facet_wrap(~type)+
+  scale_fill_manual(values = wes_palette(9, name = "Zissou1", type = "continuous"))+
+  #theme_ridges()+
+  theme_few()
+
+big_data_sw <- big_data_long %>%
+  filter(state %in% c("Arizona", "Texas", "New Mexico", "Utah", "Colorado")) %>%
+  drop_na(type)
+
+ggplot(subset(big_data_sw, category == c("Total Minority")), aes(x = enrollment_per, y = state, fill = category))+
+  geom_density_ridges()+
+  theme_ridges()+
+  theme_few()
+
+big_data_sw_filtered <- big_data_sw %>%
+  filter(category != "Total Minority",
+         category != "White",
+         category != "Men",
+         category != "Women")
+
+ggplot(big_data_sw_filtered, aes(x = enrollment_per, y = state, fill = category))+
+  geom_density_ridges(alpha=0.5)+
+  theme_ridges()+
+  theme_few()
+
+ggplot(subset(big_data_sw, category == c("Total Minority")), aes(x = enrollment_per, y = state, fill = type))+
+  geom_density_ridges(alpha=0.5)+
+  theme_ridges()+
+  theme_few()
+
+# #install.packages("geojsonio")
+# install.packages("devtools")
+# devtools::install_github("ropensci/geojsonio")
+# library("geojsonio")
+# 
+# install.packages("ropensci/geojsonio", repo='https://github.com/ropensci/geojsonio')
+```
+
+
 
