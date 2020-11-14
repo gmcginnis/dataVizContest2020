@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(gganimate)
 library(ggrepel)
 library(janitor)
 library(ggthemes)
@@ -174,6 +175,158 @@ tuition_map <- left_join(states_map, tuition_cost, by = "state") %>%
 ggplot(tuition_map, aes(x=long, y=lat))+
   geom_polygon(aes(fill = out_of_state_total))
 #whelp it's getting there
+```
+
+```{r hexmap}
+#library(geojsonsf)
+#https://www.r-graph-gallery.com/328-hexbin-map-of-the-usa.html
+```
+
+```{r women stem}
+full_div_sal <- full_join(diversity_school, salary_potential)
+
+filtered_div_sal <- full_div_sal %>%
+  drop_na() %>%
+  filter(category == "Women") %>%
+  mutate(men = total_enrollment - enrollment) %>%
+  rename(women = enrollment) %>%
+  pivot_longer(cols = c(women, men), names_to = "gender", values_to = "enrollment") %>%
+  select(!c(total_enrollment, category, rank, state_name)) %>%
+  group_by(name)
+
+ggplot(filtered_div_sal, aes(x = enrollment, y = stem_percent, color = gender, fill = gender))+
+  #geom_point(alpha=0.5)+
+  geom_smooth()+
+  #geom_quantile()+ #interesting but honestly I'm not sure how to interpret
+  scale_color_manual(values = c(men = "blue", women = "hotpink"))+
+  scale_fill_manual(values = c(men = "blue", women = "hotpink"))+
+  theme_few()
+
+mini_ds <- filtered_div_sal  %>%
+  filter(state == "California")
+
+ggplot(mini_ds, aes(x = enrollment, y = stem_percent, color = gender, fill = gender))+
+  geom_point(alpha=0.5)+
+  #geom_smooth()+
+  #geom_quantile()+ #interesting but honestly I'm not sure how to interpret
+  scale_color_manual(values = c(men = "blue", women = "hotpink"))+
+  scale_fill_manual(values = c(men = "blue", women = "hotpink"))+
+  theme_few()
+
+
+percent_div_sal <- full_div_sal %>%
+  drop_na() %>%
+  filter(category == "Women") %>%
+  mutate(women = (enrollment/total_enrollment)*100,
+         #men = 100-women,
+         men = ((total_enrollment-enrollment)/total_enrollment)*100) %>%
+  select(!c(total_enrollment, category, rank, state_name, enrollment)) %>%
+  pivot_longer(cols = c(women, men), names_to = "gender", values_to = "enrollment") %>%
+  group_by(name)
+
+#ok this looks pretty cool but not super helpful
+ggplot(percent_div_sal, aes(x = enrollment, y = stem_percent, color = gender, fill = gender))+
+  geom_point(alpha=0.5)+
+  #geom_smooth()+
+  #geom_quantile()+ #interesting but honestly I'm not sure how to interpret
+  scale_color_manual(values = c(men = "blue", women = "hotpink"))+
+  scale_fill_manual(values = c(men = "blue", women = "hotpink"))+
+  theme_few()
+
+ggplot(subset(percent_div_sal, gender == "women"), aes(x = enrollment, y = stem_percent, color = gender, fill = gender))+
+  geom_point(alpha=0.5)+
+  #geom_smooth()+
+  #geom_quantile()+ #interesting but honestly I'm not sure how to interpret
+  scale_color_manual(values = c(men = "blue", women = "hotpink"))+
+  scale_fill_manual(values = c(men = "blue", women = "hotpink"))+
+  theme_few()
+  
+```
+
+```{r diversity stem}
+full_div_sal <- full_join(diversity_school, salary_potential)
+
+percent_min_sal <- full_div_sal %>%
+  drop_na() %>%
+  filter(category == "Total Minority") %>%
+  mutate(minority = (enrollment/total_enrollment)*100,
+         #men = 100-women,
+         non = ((total_enrollment-enrollment)/total_enrollment)*100) %>%
+  select(!c(total_enrollment, category, rank, state_name, enrollment)) %>%
+  pivot_longer(cols = c(minority, non), names_to = "minority", values_to = "enrollment") %>%
+  group_by(name)
+
+ggplot(percent_min_sal, aes(x = enrollment, y = stem_percent, color = minority, fill = minority))+
+  geom_point(alpha=0.5)+
+  theme_few()
+
+ggplot(subset(percent_min_sal, minority == "minority"), aes(x = enrollment, y = stem_percent))+
+  geom_point(alpha=0.5, color = "blue")+
+  #geom_smooth()+
+  #geom_quantile()+ #interesting but honestly I'm not sure how to interpret
+  theme_few()
+```
+
+```{r animated}
+full_div_sal <- full_join(diversity_school, salary_potential)
+
+div_sal <- full_div_sal %>%
+  drop_na() %>%
+  mutate(percent = (enrollment/total_enrollment)*100) %>%
+  select(!c(total_enrollment, rank, state_name, early_career_pay, mid_career_pay)) %>%
+  group_by(name)
+
+## first animation!!
+ggplot(div_sal, aes(x = percent, y = stem_percent, color = category, group = category))+
+  geom_point()+
+  transition_states(category,
+                    transition_length = 2,
+                    state_length = 1)
+
+ggplot(div_sal, aes(x = percent, y = stem_percent))+
+  geom_point(alpha=0.3)+
+  facet_wrap(~category)
+
+div_sal_wm <- full_div_sal %>%
+  drop_na() %>%
+  select(!c(rank, state_name, early_career_pay, mid_career_pay)) %>%
+  pivot_wider(names_from = category, values_from = enrollment) %>%
+  mutate(Men = total_enrollment-Women) %>%
+  pivot_longer(cols = c(6:17), names_to = "category", values_to = "enrollment") %>%
+  mutate(percent = (enrollment/total_enrollment)*100)
+
+div_sal_gender <- div_sal_wm %>%
+  filter(category %in% c("Women", "Men"))
+
+div_sal_now <- div_sal_wm %>%
+  filter(category != c("White", "Men", "Women"))
+
+div_sal_white <- div_sal_wm %>%
+  filter(category == "White") %>%
+  select(!c(category))
+
+div_sal_men <- div_sal_wm %>%
+  filter(category == "Men") %>%
+  select(!c(category))
+
+ggplot(div_sal_men, aes(x = percent, y = stem_percent))+
+  geom_point()+
+  geom_rug()
+
+ggplot(div_sal_now, aes(x = percent, y = stem_percent))+
+  #geom_point(data=div_sal_men, color = "blue", alpha = 0.1)+
+  geom_point(data=div_sal_white, color = "red", alpha = 0.1, shape = 10)+
+  geom_point(alpha=0.3, color = "blue")+
+  facet_wrap(~category)+
+  theme_few()
+
+ggplot(div_sal_now, aes(x = percent, y = stem_percent))+
+  #geom_rug(data=div_sal_men, color = "blue", alpha = 0.1)+
+  geom_rug(data=div_sal_white, color = "red", alpha = 0.1)+
+  geom_point(alpha=0.3, color = "blue")+
+  facet_wrap(~category)+
+  theme_few()
+
 ```
 
 
