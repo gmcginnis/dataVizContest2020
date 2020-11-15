@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggthemes)
 library(wesanderson)
+#library(RColorBrewer)
+#install.packages("yarrr")
+#library(yarrr)
+library(plotly)
 ```
 
 ```{r dataframes}
@@ -29,7 +33,7 @@ states <- read_csv("data/states.csv") %>%
 ```
 
 ```{r viz}
-final_stacked <- diversity_school %>%
+all_div <- diversity_school %>%
   group_by(category) %>%
   mutate(enrollment_per = (enrollment/total_enrollment)*100) %>%
   select(!enrollment) %>%
@@ -42,41 +46,72 @@ final_stacked <- diversity_school %>%
   summarize(mean = mean(enrollment_per)) %>%
   full_join(census_regions) %>%
   full_join(states) %>%
-  drop_na() %>%
+  drop_na()
+
+final_stacked <- all_div %>%
   filter(category != "Women",
          category != "Men",
          category != "Total Minority")
 
-library(plotly)
-library(htmlwidgets)
+#mycolors <- colorRampPalette(brewer.pal(12, "Set3"))(9)
+#mycolors <- colorRampPalette(few_pal()(7))(9)
+#mycolors <- c("#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#a0c4ff", "#bdb2ff", "#ffc6ff", "#fffffc")
+mycolors <- c("#ff8787", "#ffc57e", "#fbff90", "#a6ff95", "#74f3ff", "#79acff", "#9d8bff", "#ff9eff", "#ffffcc")
+#mycolors <- c("#ff6666", "#ffb861", "#FAFF5C", "#8bff74", "#58f1ff", "#5c9bff", "#816aff", "#ff7dff", "#ffffcc")
+#mycolors <- c("#d00000", "#ffba08", "#cbff8c", "#8fe388", "#1b998b", "#3185fc", "#5d2e8c", "#46237a", "#ff7b9c", "#ff9b85")
+#mycolors <- c("#d00000", "#ffba08", "#cbff8c", "#8fe388", "#1b998b", "#3185fc", "#5d2e8c", "#ff7b9c", "#fffffc")
 
 interactiveViz <- ggplot(final_stacked, aes(x = code, y = mean, fill = category))+
   geom_col()+
-  #coord_polar()+
   ylim(0, 100)+
-  #scale_color_manual(values = wes_palette(9, name = "Zissou1", type = "continuous"))+
-  scale_fill_manual(values = wes_palette(9, name = "Darjeeling1", type = "continuous"))+
+  #scale_fill_manual(values = wes_palette(9, name = "Darjeeling1", type = "continuous"))+
+  scale_fill_manual(values = mycolors)+
+  #scale_fill_brewer(palette = "Dark2")+
+  #scale_fill_manual(values = piratepal(palette = "basel"))+
+  #scale_fill_brewer(palette = "Set3")+
   #theme_light()+
-  theme_tufte()+
+  #theme_tufte()+
   theme(axis.text.x = element_text(angle = 90, size = 7),
         axis.title.x = element_blank(),
         text=element_text(family = "CenturySch"))+
-  labs(y = "Mean %", fill = "Group")
-  
-#ggplotly(interactiveViz)
+  labs(y = "Mean %", fill = "Group", caption = "Mean percentage by state of enrolled student population by race.")
+
+# quickCkeck <- final_stacked %>%
+#   ungroup()%>%
+#   group_by(state)%>%
+#   summarize(sum(mean))
 
 myViz <- interactiveViz +
   aes(x = abbrev)+
   coord_polar()+
-  theme_tufte()+
+  #theme_tufte()+
+  theme_minimal()+
   theme(axis.text.x = element_text(angle = -35, size = 8),
         axis.title.x = element_blank(),
         axis.text.y = element_blank(),
         axis.title.y = element_blank(),
-        axis.ticks = element_blank(),
-        text=element_text(family = "CenturySch"))
+        axis.line = element_blank(),
+        panel.border = element_blank(),
+        text=element_text(family = "CenturySch"),
+        panel.grid.major.y = element_blank())
+
 myViz
 
-#ggsave("Diversity.png", plot = myViz)
+#ggplotly(interactiveViz)
+ggsave("Diversity.png", plot = myViz)
+
+
+allCats <- unique(all_div$category)
+catOfInterest <- "White" #Change this to another category for the plot below:
+
+singleCatPlot <- ggplot(subset(all_div, category == catOfInterest), aes(x = abbrev, y = mean, fill = mean))+
+  geom_col()+
+  coord_polar()+
+  ylim(0, 100)+
+  aes(x=reorder(abbrev, mean))+
+  scale_fill_gradientn(limits = c(0, 100), colors = wes_palette(name = "Zissou1", type="continuous"))+
+  theme_light()+
+  theme(axis.text.x = element_text(angle=-20), axis.title.x = element_blank())+
+  labs(y = "Mean %", fill = "Group")
 ```
 
