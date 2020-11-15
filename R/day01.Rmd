@@ -667,14 +667,22 @@ interactiveViz <- ggplot(final_stacked, aes(x = code, y = mean, fill = category)
   #scale_color_manual(values = wes_palette(9, name = "Zissou1", type = "continuous"))+
   scale_fill_manual(values = wes_palette(9, name = "Darjeeling1", type = "continuous"))+
   #theme_light()+
-  theme_few()+
-  theme(axis.text.x = element_text(angle=90), axis.title.x = element_blank())+
+  theme_tufte()+
+  theme(axis.text.x = element_text(angle = 90, size = 7),
+        axis.title.x = element_blank(),
+        text=element_text(family = "CenturySch"))
   labs(y = "Mean %", fill = "Group")
 
 myViz <- interactiveViz +
   aes(x = abbrev)+
   coord_polar()+
-  theme(axis.text.x = element_text(angle = -30), axis.title.x = element_blank())
+  theme_tufte()+
+  theme(axis.text.x = element_text(angle = -35, size = 8),
+        axis.title.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        text=element_text(family = "CenturySch"))
 myViz
 
 ggsave("Diversity.png", plot = myViz)
