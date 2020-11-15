@@ -670,7 +670,7 @@ interactiveViz <- ggplot(final_stacked, aes(x = code, y = mean, fill = category)
   theme_tufte()+
   theme(axis.text.x = element_text(angle = 90, size = 7),
         axis.title.x = element_blank(),
-        text=element_text(family = "CenturySch"))
+        text=element_text(family = "CenturySch"))+
   labs(y = "Mean %", fill = "Group")
 
 myViz <- interactiveViz +

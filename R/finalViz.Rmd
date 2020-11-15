@@ -1,0 +1,82 @@
+---
+title: "Final Viz"
+author: "Gillian McGinnis"
+date: "11/14/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggthemes)
+library(wesanderson)
+```
+
+```{r dataframes}
+# Loading data; source: https://github.com/Reed-Statistics/data-viz-competition-2020
+rm(list = ls())
+
+diversity_school <- 
+  read_csv("https://raw.githubusercontent.com/Reed-Statistics/data-viz-competition-2020/main/data/diversity_school.csv") %>%
+  dplyr::select(-X1)
+
+census_regions <- read_csv("https://raw.githubusercontent.com/cphalpert/census-regions/master/us%20census%20bureau%20regions%20and%20divisions.csv") %>%
+  clean_names()
+
+# state source: https://worldpopulationreview.com/states/state-abbreviations
+states <- read_csv("data/states.csv") %>%
+  clean_names()
+```
+
+```{r viz}
+final_stacked <- diversity_school %>%
+  group_by(category) %>%
+  mutate(enrollment_per = (enrollment/total_enrollment)*100) %>%
+  select(!enrollment) %>%
+  mutate(row = row_number()) %>%
+  pivot_wider(names_from = category, values_from = enrollment_per) %>%
+  mutate(Men = (100-Women)) %>%
+  pivot_longer(cols=5:16, names_to = "category", values_to = "enrollment_per") %>%
+  drop_na(enrollment_per, state) %>%
+  group_by(state, category) %>%
+  summarize(mean = mean(enrollment_per)) %>%
+  full_join(census_regions) %>%
+  full_join(states) %>%
+  drop_na() %>%
+  filter(category != "Women",
+         category != "Men",
+         category != "Total Minority")
+
+library(plotly)
+library(htmlwidgets)
+
+interactiveViz <- ggplot(final_stacked, aes(x = code, y = mean, fill = category))+
+  geom_col()+
+  #coord_polar()+
+  ylim(0, 100)+
+  #scale_color_manual(values = wes_palette(9, name = "Zissou1", type = "continuous"))+
+  scale_fill_manual(values = wes_palette(9, name = "Darjeeling1", type = "continuous"))+
+  #theme_light()+
+  theme_tufte()+
+  theme(axis.text.x = element_text(angle = 90, size = 7),
+        axis.title.x = element_blank(),
+        text=element_text(family = "CenturySch"))+
+  labs(y = "Mean %", fill = "Group")
+  
+#ggplotly(interactiveViz)
+
+myViz <- interactiveViz +
+  aes(x = abbrev)+
+  coord_polar()+
+  theme_tufte()+
+  theme(axis.text.x = element_text(angle = -35, size = 8),
+        axis.title.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        text=element_text(family = "CenturySch"))
+myViz
+
+#ggsave("Diversity.png", plot = myViz)
+```
+
